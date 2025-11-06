@@ -126,6 +126,12 @@ const reports = reactive([
     route: "/admin/reportes/ventas-por-cine",
     permitedRoles: [AppRoles.ADMIN],
   },
+  {
+    title: "Comentarios de salas",
+    description: "Historial de comentarios por sala en tus cines",
+    route: "/admin/reportes/comentarios-usuarios",
+    permitedRoles: [AppRoles.CINEMA_ADMIN],
+  },
 ]);
 
 const filteredReports = computed(() => {
