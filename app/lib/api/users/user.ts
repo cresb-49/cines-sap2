@@ -63,3 +63,46 @@ export const getSponsoredUsers = async (): Promise<UserResponseDTO[]> => {
   });
   return response;
 }
+
+
+export interface UpdatePasswordDTO {
+  password: string; //min 8, max 100
+}
+
+export const updatePassword = async (
+  userId: string,
+  request: UpdatePasswordDTO): Promise<UserResponseDTO> => {
+  const response = await $api<UserResponseDTO>(`${CURRENT_USER_URI}/${userId}/password`, {
+    method: "PATCH",
+    body: request,
+  });
+  return response;
+}
+
+export const getUserById = async (userId: string): Promise<UserResponseDTO> => {
+  const response = await $api<UserResponseDTO>(`${CURRENT_USER_URI}/${userId}`, {
+    method: "GET",
+  });
+  return response;
+};
+
+export interface SaveProfileDTO{
+  firstName: string; //min 2, max 50
+  lastName: string; //min 2, max 50
+}
+
+export interface SaveUserDTO{
+  email: string; //min 5, max 100
+  profile: SaveProfileDTO;
+}
+
+export const updateUser = async (
+  userId: string,
+  request: SaveUserDTO
+): Promise<UserResponseDTO> => {
+  const response = await $api<UserResponseDTO>(`${CURRENT_USER_URI}/${userId}`, {
+    method: "PATCH",
+    body: request,
+  });
+  return response;
+}
