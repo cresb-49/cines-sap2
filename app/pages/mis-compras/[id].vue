@@ -280,18 +280,115 @@
             </Column>
           </DataTable>
         </section>
+
+        <section
+          v-if="sale && sale.status === SaleStatusType.PAID"
+          class="rounded-2xl border border-slate-200 bg-white shadow-sm p-6 sm:p-8 space-y-5"
+        >
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-semibold text-slate-900">Escribe una reseña</h2>
+              <p class="text-sm text-slate-600">
+                Comparte tu experiencia sobre la sala y la película de esta compra.
+              </p>
+            </div>
+          </div>
+
+          <div
+            v-if="!reviewTicket"
+            class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-600"
+          >
+            No encontramos un ticket con película elegible para reseña en esta compra.
+          </div>
+
+          <form v-else class="space-y-5" @submit.prevent="handleSubmitReview">
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-5 space-y-2">
+              <p class="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                Película a calificar
+              </p>
+              <p class="text-sm text-slate-700">
+                <span class="font-semibold text-slate-900">{{ reviewTicket.movieTitle }}</span>
+                <span v-if="reviewTicket.hallName" class="text-slate-500">
+                  · {{ reviewTicket.hallName }}
+                </span>
+                <span v-if="reviewTicket.schedule" class="block text-xs text-slate-500">
+                  {{ reviewTicket.schedule }}
+                </span>
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <label class="flex flex-col gap-2">
+                <span class="text-sm font-semibold text-slate-700">Calificación de la sala</span>
+                <InputNumber
+                  v-model="reviewForm.roomRating"
+                  :min="1"
+                  :max="5"
+                  :step="1"
+                  :useGrouping="false"
+                  showButtons
+                  inputClass="w-full"
+                  :disabled="submittingReview"
+                />
+              </label>
+
+              <label class="flex flex-col gap-2">
+                <span class="text-sm font-semibold text-slate-700">Calificación de la película</span>
+                <InputNumber
+                  v-model="reviewForm.movieRating"
+                  :min="1"
+                  :max="5"
+                  :step="1"
+                  :useGrouping="false"
+                  showButtons
+                  inputClass="w-full"
+                  :disabled="submittingReview"
+                />
+              </label>
+            </div>
+
+            <label class="flex flex-col gap-2">
+              <span class="text-sm font-semibold text-slate-700">Comentario (opcional)</span>
+              <Textarea
+                v-model.trim="reviewForm.comment"
+                :autoResize="true"
+                rows="4"
+                maxlength="500"
+                class="w-full"
+                placeholder="Comparte detalles sobre tu experiencia (máx. 500 caracteres)"
+                :disabled="submittingReview"
+              />
+            </label>
+
+            <p v-if="reviewErrorMessage" class="text-sm text-red-600">
+              {{ reviewErrorMessage }}
+            </p>
+
+            <div class="flex justify-end">
+              <Button
+                type="submit"
+                label="Enviar reseña"
+                icon="pi pi-send"
+                :loading="submittingReview"
+                :disabled="submittingReview"
+              />
+            </div>
+          </form>
+        </section>
       </div>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import { RouterLink, useRoute } from "vue-router";
 import Button from "primevue/button";
 import Tag from "primevue/tag";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
+import InputNumber from "primevue/inputnumber";
+import Textarea from "primevue/textarea";
 import { toast } from "vue-sonner";
 import { useCustomQuery } from "~/composables/useCustomQuery";
 import {
@@ -310,10 +407,23 @@ import {
   type ShowtimeResponseDTO,
 } from "~/lib/api/cinema/showtime";
 import { getMoviesByIds, type MovieResponseDTO } from "~/lib/api/movies/movie";
+import {
+  createReview,
+  type CreateReviewRequest,
+} from "~/lib/api/reviews/reviews";
 
 type TicketWithDetails = SaleLineTicketResponseDTO & {
   showtime: ShowtimeResponseDTO | null;
   movie: MovieResponseDTO | null;
+};
+
+type ReviewTicketContext = {
+  ticketId: string;
+  movieId: string;
+  roomId: string;
+  movieTitle: string;
+  hallName: string | null;
+  schedule: string | null;
 };
 
 const route = useRoute();
@@ -393,11 +503,18 @@ const movieIds = computed(() => {
   const ids = new Set<string>();
   const tickets = sale.value?.saleLineTickets ?? [];
   for (const ticket of tickets) {
-    const functionId = ticket.ticketView?.cinemaFunctionId;
+    const ticketView = ticket.ticketView;
+    const movieIdFromTicket = ticketView?.movieId;
+    if (movieIdFromTicket) {
+      ids.add(movieIdFromTicket);
+      continue;
+    }
+
+    const functionId = ticketView?.cinemaFunctionId;
     if (!functionId) continue;
     const showtime = showtimeById.value.get(functionId);
-    const movieId = showtime?.cinemaMovie?.movieId ?? ticket.ticketView?.movieId;
-    if (movieId) ids.add(movieId);
+    const movieIdFromShowtime = showtime?.cinemaMovie?.movieId;
+    if (movieIdFromShowtime) ids.add(movieIdFromShowtime);
   }
   return Array.from(ids);
 });
@@ -435,14 +552,49 @@ const ticketsWithDetails = computed<TicketWithDetails[]>(() => {
   return tickets.map((ticket) => {
     const functionId = ticket.ticketView?.cinemaFunctionId ?? "";
     const showtime = functionId ? showtimeById.value.get(functionId) ?? null : null;
-    const movieId = showtime?.cinemaMovie?.movieId ?? ticket.ticketView?.movieId ?? "";
+    const movieId = ticket.ticketView?.movieId ?? showtime?.cinemaMovie?.movieId ?? "";
     const movie = movieId ? moviesById.value.get(movieId) ?? null : null;
     return { ...ticket, showtime, movie };
   });
 });
 
+const reviewTicket = computed<ReviewTicketContext | null>(() => {
+  for (const ticket of ticketsWithDetails.value) {
+    const ticketView = ticket.ticketView;
+    const movieId = ticketView?.movieId;
+    const roomId = ticketView?.cinemaRoomId;
+    if (!movieId || !roomId) continue;
+
+    const movieTitle = ticket.movie?.title ?? "Película no disponible";
+    const hallName = ticket.showtime?.hall?.name ?? null;
+    let schedule = formatShowtimeSchedule(ticket.showtime);
+    if (schedule === "Horario no disponible") {
+      schedule = null;
+    }
+
+    return {
+      ticketId: ticketView?.id ?? ticket.id,
+      movieId,
+      roomId,
+      movieTitle,
+      hallName,
+      schedule,
+    };
+  }
+
+  return null;
+});
+
 const loading = computed(() => saleStatus.value === "loading");
 const retrying = ref(false);
+const submittingReview = ref(false);
+const reviewErrorMessage = ref<string | null>(null);
+
+const reviewForm = reactive({
+  roomRating: 5,
+  movieRating: 5,
+  comment: "",
+});
 
 const errorMessage = computed(() => {
   const maybeError = saleState.value.error as
@@ -467,6 +619,65 @@ async function handleRetryPayment() {
     toast.error(message);
   } finally {
     retrying.value = false;
+  }
+}
+
+async function handleSubmitReview() {
+  reviewErrorMessage.value = null;
+
+  const currentSale = sale.value;
+  const selected = reviewTicket.value;
+
+  if (!currentSale) {
+    reviewErrorMessage.value = "La venta no está disponible.";
+    return;
+  }
+
+  if (!selected) {
+    reviewErrorMessage.value = "No encontramos una película elegible para enviar la reseña.";
+    return;
+  }
+
+  const roomRating = Math.round(reviewForm.roomRating ?? 0);
+  const movieRating = Math.round(reviewForm.movieRating ?? 0);
+
+  if (Number.isNaN(roomRating) || roomRating < 1 || roomRating > 5) {
+    reviewErrorMessage.value = "La calificación de la sala debe estar entre 1 y 5.";
+    return;
+  }
+
+  if (Number.isNaN(movieRating) || movieRating < 1 || movieRating > 5) {
+    reviewErrorMessage.value = "La calificación de la película debe estar entre 1 y 5.";
+    return;
+  }
+
+  const trimmedComment = reviewForm.comment?.trim();
+  const payload: CreateReviewRequest = {
+    clientId: currentSale.clientId,
+    cinemaId: currentSale.cinemaId,
+    roomId: selected.roomId,
+    movieId: selected.movieId,
+    roomRating,
+    movieRating,
+    comment: trimmedComment ? trimmedComment : undefined,
+  };
+
+  try {
+    submittingReview.value = true;
+    await createReview(payload);
+    toast.success("¡Gracias! Tu reseña se envió correctamente.");
+    reviewForm.roomRating = 5;
+    reviewForm.movieRating = 5;
+    reviewForm.comment = "";
+  } catch (error: any) {
+    const message =
+      error?.data?.message ??
+      error?.message ??
+      "No se pudo enviar la reseña. Inténtalo nuevamente.";
+    reviewErrorMessage.value = message;
+    toast.error(message);
+  } finally {
+    submittingReview.value = false;
   }
 }
 

@@ -253,6 +253,88 @@
           </div>
         </div>
       </section>
+
+      <section class="space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Reviews</h2>
+            <p class="text-sm text-slate-600">
+              Consulta los reviews para este cine, dejados por otras personas
+            </p>
+          </div>
+          <span v-if="reviewsStatus === 'success'" class="text-sm text-slate-600">
+            {{ totalReviews }}
+            {{ totalReviews === 1 ? "review publicado" : "reviews publicados" }}
+          </span>
+        </div>
+
+        <div v-if="reviewsStatus === 'loading' && !reviews.length" class="py-16 text-center text-slate-600">
+          <i class="pi pi-spinner pi-spin text-2xl mb-3" aria-hidden="true"></i>
+          Cargando reviews…
+        </div>
+
+        <div v-else-if="reviewsStatus === 'error'" class="py-16 text-center text-red-600 space-y-3">
+          <p>{{ reviewsErrorMessage }}</p>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-300 text-sm font-medium text-red-700 hover:bg-red-50"
+            @click="refetchReviews"
+          >
+            <i class="pi pi-refresh text-xs" aria-hidden="true"></i>
+            Reintentar
+          </button>
+        </div>
+
+        <div v-else-if="!reviews.length" class="py-16 text-center text-slate-600">
+          Aún no hay reviews para este cine.
+        </div>
+
+        <div v-else class="space-y-4">
+          <div
+            v-for="review in reviews"
+            :key="review.id"
+            class="rounded-xl border border-slate-200 bg-white px-6 py-5 shadow-sm"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-1">
+              <div class="flex items-center gap-2 text-amber-500">
+                Pelicula
+                <i
+                  v-for="index in 5"
+                  :key="`review-${review.id}-star-${index}`"
+                  class="pi text-sm"
+                  :class="isStarActive(review.roomRating, index) ? 'pi-star-fill text-amber-400' : 'pi-star text-slate-300'"
+                  aria-hidden="true"
+                ></i>
+                <span class="text-sm font-semibold text-slate-700">
+                  {{ formatRatingDisplay(review.roomRating) }}
+                </span>
+              </div>
+              <div class="flex items-center gap-2 text-amber-500">
+                Sala
+                <i
+                  v-for="index in 5"
+                  :key="`review-${review.id}-star-${index}`"
+                  class="pi text-sm"
+                  :class="isStarActive(review.movieRating, index) ? 'pi-star-fill text-amber-400' : 'pi-star text-slate-300'"
+                  aria-hidden="true"
+                ></i>
+                <span class="text-sm font-semibold text-slate-700">
+                  {{ formatRatingDisplay(review.movieRating) }}
+                </span>
+              </div>
+              <span class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Origen: {{ review.clientId || 'Desconocido' }}
+              </span>
+              <span class="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Sala: {{ review.roomId || 'Desconocido' }}
+              </span>
+            </div>
+            <p class="mt-3 text-sm text-slate-600 whitespace-pre-line">
+              {{ review.comment || 'Sin comentario proporcionado.' }}
+            </p>
+          </div>
+        </div>
+      </section>
     </template>
   </PublicCinemaTemplate>
 </template>
@@ -271,6 +353,7 @@ import {
   type AnuncioViewResponseDTO,
 } from '~/lib/api/anuncios/anuncio'
 import { getShowtimesByCinema, type ShowtimeResponseDTO } from '~/lib/api/cinema/showtime'
+import { getReviews, type Review } from '~/lib/api/reviews/reviews'
 import { useCustomQuery } from '~/composables/useCustomQuery'
 
 const route = useRoute()
@@ -329,6 +412,32 @@ const snacksErrorMessage = computed(() => {
   return error?.message ?? 'No se pudo cargar el catálogo de snacks.'
 })
 const totalSnacks = computed(() => snacksState.value?.data?.totalElements ?? snacks.value.length ?? 0)
+
+const {
+  state: reviewsState,
+  asyncStatus: reviewsAsyncStatus,
+  refetch: refetchReviews,
+} = useCustomQuery({
+  key: ['public-cinema-reviews', () => cinemaId.value],
+  query: async () => {
+    const id = cinemaId.value
+    if (!id) {
+      throw new Error('Identificador de cine no disponible.')
+    }
+    return getReviews({ cinemaId: id })
+  },
+})
+
+const reviewsStatus = computed(() => reviewsAsyncStatus?.value ?? 'loading')
+const reviews = computed<Review[]>(() => {
+  const data = reviewsState.value?.data as Review[] | undefined
+  return data ?? []
+})
+const reviewsErrorMessage = computed(() => {
+  const error = reviewsState.value?.error as { message?: string } | undefined
+  return error?.message ?? 'No se pudieron cargar los reviews.'
+})
+const totalReviews = computed(() => reviews.value.length)
 
 const {
   state: showtimesState,
@@ -427,5 +536,21 @@ function formatDate(value?: string | null) {
     month: 'short',
     day: '2-digit',
   })
+}
+
+function formatRating(value?: number | null) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '—'
+  return Number.isInteger(value) ? value.toString() : value.toFixed(1)
+}
+
+function formatRatingDisplay(value?: number | null) {
+  const formatted = formatRating(value)
+  if (formatted === '—') return formatted
+  return `${formatted}/5`
+}
+
+function isStarActive(rating: number | undefined, index: number) {
+  if (typeof rating !== 'number' || Number.isNaN(rating)) return false
+  return Math.round(rating) >= index
 }
 </script>

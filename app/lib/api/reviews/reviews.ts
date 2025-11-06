@@ -3,15 +3,28 @@ import type { Entity } from "../utils/entity";
 const CURRENT_REVIEWS_URI = "/v1/reviews";
 
 export interface Review extends Entity {
-    establishmentId: string,
-    sourceId: string,
+    cinemaId: string,
+    clientId: string,
+    roomId: string,
+    movieId: string,
     comment: string,
-    rating: number
+    roomRating: number,
+    movieRating: number
 }
 
 export interface PromotionType {
     code: string,
     name: string
+}
+
+export interface CreateReviewRequest {
+    clientId: string,
+    cinemaId: string,
+    roomId: string,
+    movieId: string,
+    roomRating: number,
+    movieRating: number,
+    comment?: string | null
 }
 
 /**
@@ -22,5 +35,12 @@ export interface PromotionType {
 export async function getReviews(params?: {}) {
   return await $api<Review[]>(`${CURRENT_REVIEWS_URI}`, {
     params
+  })
+}
+
+export async function createReview(body: CreateReviewRequest) {
+  return await $api<Review>(`${CURRENT_REVIEWS_URI}`, {
+    method: "POST",
+    body
   })
 }
