@@ -51,11 +51,26 @@
       </section>
 
       <section class="rounded-2xl border border-slate-200 bg-white shadow p-6 space-y-6">
-        <div class="space-y-1">
-          <h2 class="text-xl font-semibold text-slate-900">Actualizar información personal</h2>
-          <p class="text-sm text-slate-600">
-            Modifica tu nombre y correo electrónico. Los cambios se aplican inmediatamente.
-          </p>
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div class="space-y-1">
+            <h2 class="text-xl font-semibold text-slate-900">Actualizar información personal</h2>
+            <p class="text-sm text-slate-600">
+              Modifica tu nombre y correo electrónico. Los cambios se aplican inmediatamente.
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <Button
+              type="button"
+              :label="profileLocked ? 'Habilitar edición' : 'Bloquear formulario'"
+              :icon="profileLocked ? 'pi pi-lock' : 'pi pi-lock-open'"
+              severity="secondary"
+              outlined
+              size="small"
+              :disabled="!user"
+              @click="toggleProfileLock"
+            />
+            <p v-if="profileLocked" class="text-xs text-slate-500">Haz clic en el candado para realizar cambios.</p>
+          </div>
         </div>
         <div v-if="!user" class="text-sm text-slate-600">
           Debes iniciar sesión para actualizar tu información.
@@ -80,7 +95,7 @@
                 id="firstName"
                 v-model.trim="profileForm.firstName"
                 autocomplete="given-name"
-                :disabled="updatingProfile"
+                :disabled="updatingProfile || profileLocked"
                 class="w-full"
               />
               <p v-if="profileErrors.firstName" class="mt-1 text-sm text-red-600">
@@ -95,7 +110,7 @@
                 id="lastName"
                 v-model.trim="profileForm.lastName"
                 autocomplete="family-name"
-                :disabled="updatingProfile"
+                :disabled="updatingProfile || profileLocked"
                 class="w-full"
               />
               <p v-if="profileErrors.lastName" class="mt-1 text-sm text-red-600">
@@ -112,7 +127,7 @@
               v-model.trim="profileForm.email"
               type="email"
               autocomplete="email"
-              :disabled="updatingProfile"
+              :disabled="updatingProfile || profileLocked"
               class="w-full"
             />
             <p v-if="profileErrors.email" class="mt-1 text-sm text-red-600">
@@ -125,18 +140,33 @@
               label="Guardar cambios"
               icon="pi pi-save"
               :loading="updatingProfile"
-              :disabled="updatingProfile"
+              :disabled="updatingProfile || profileLocked"
             />
           </div>
         </form>
       </section>
 
       <section class="rounded-2xl border border-slate-200 bg-white shadow p-6 space-y-6">
-        <div class="space-y-1">
-          <h2 class="text-xl font-semibold text-slate-900">Actualizar contraseña</h2>
-          <p class="text-sm text-slate-600">
-            Usa una contraseña segura con al menos 8 caracteres.
-          </p>
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div class="space-y-1">
+            <h2 class="text-xl font-semibold text-slate-900">Actualizar contraseña</h2>
+            <p class="text-sm text-slate-600">
+              Usa una contraseña segura con al menos 8 caracteres.
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <Button
+              type="button"
+              :label="passwordLocked ? 'Habilitar edición' : 'Bloquear formulario'"
+              :icon="passwordLocked ? 'pi pi-lock' : 'pi pi-lock-open'"
+              severity="secondary"
+              outlined
+              size="small"
+              :disabled="!user"
+              @click="togglePasswordLock"
+            />
+            <p v-if="passwordLocked" class="text-xs text-slate-500">Desbloquea para modificar tu contraseña.</p>
+          </div>
         </div>
         <div v-if="!user" class="text-sm text-slate-600">
           Debes iniciar sesión para cambiar tu contraseña.
@@ -148,14 +178,14 @@
                 Nueva contraseña *
               </label>
               <InputText
-                id="password"
-                v-model.trim="passwordForm.password"
-                type="password"
-                autocomplete="new-password"
-                :disabled="updatingPassword"
-                class="w-full"
-                maxlength="100"
-              />
+              id="password"
+              v-model.trim="passwordForm.password"
+              type="password"
+              autocomplete="new-password"
+              :disabled="updatingPassword || passwordLocked"
+              class="w-full"
+              maxlength="100"
+            />
               <p v-if="passwordErrors.password" class="mt-1 text-sm text-red-600">
                 {{ passwordErrors.password }}
               </p>
@@ -165,14 +195,14 @@
                 Confirmar contraseña *
               </label>
               <InputText
-                id="confirmPassword"
-                v-model.trim="passwordForm.confirmPassword"
-                type="password"
-                autocomplete="new-password"
-                :disabled="updatingPassword"
-                class="w-full"
-                maxlength="100"
-              />
+              id="confirmPassword"
+              v-model.trim="passwordForm.confirmPassword"
+              type="password"
+              autocomplete="new-password"
+              :disabled="updatingPassword || passwordLocked"
+              class="w-full"
+              maxlength="100"
+            />
               <p v-if="passwordErrors.confirmPassword" class="mt-1 text-sm text-red-600">
                 {{ passwordErrors.confirmPassword }}
               </p>
@@ -184,7 +214,7 @@
               label="Actualizar contraseña"
               icon="pi pi-shield"
               :loading="updatingPassword"
-              :disabled="updatingPassword"
+              :disabled="updatingPassword || passwordLocked"
             />
           </div>
         </form>
@@ -383,6 +413,7 @@ const profileErrors = reactive<Record<keyof typeof profileForm, string | null>>(
 })
 
 const updatingProfile = ref(false)
+const profileLocked = ref(true)
 
 const passwordForm = reactive({
   password: '',
@@ -395,6 +426,7 @@ const passwordErrors = reactive<Record<keyof typeof passwordForm, string | null>
 })
 
 const updatingPassword = ref(false)
+const passwordLocked = ref(true)
 
 const displayFullName = computed(() => {
   const first = account.value?.profile?.firstName ?? ''
@@ -434,8 +466,20 @@ watch(
       passwordErrors.password = null
       passwordErrors.confirmPassword = null
     }
+    profileLocked.value = true
+    passwordLocked.value = true
   }
 )
+
+function toggleProfileLock() {
+  if (!userId.value) return
+  profileLocked.value = !profileLocked.value
+}
+
+function togglePasswordLock() {
+  if (!userId.value) return
+  passwordLocked.value = !passwordLocked.value
+}
 
 function validateProfileForm() {
   const first = profileForm.firstName.trim()
@@ -455,7 +499,7 @@ function validateProfileForm() {
 }
 
 async function handleUpdateProfile() {
-  if (!userId.value || updatingProfile.value) return
+  if (!userId.value || updatingProfile.value || profileLocked.value) return
   if (!validateProfileForm()) return
 
   updatingProfile.value = true
@@ -478,6 +522,7 @@ async function handleUpdateProfile() {
       userId: updated.id,
     }
     toast.success('Información actualizada correctamente.')
+    profileLocked.value = true
     await accountRefetch()
   } catch (error: any) {
     const message =
@@ -501,7 +546,7 @@ function validatePasswordForm() {
 }
 
 async function handleUpdatePassword() {
-  if (!userId.value || updatingPassword.value) return
+  if (!userId.value || updatingPassword.value || passwordLocked.value) return
   if (!validatePasswordForm()) return
 
   updatingPassword.value = true
@@ -514,6 +559,7 @@ async function handleUpdatePassword() {
     toast.success('Contraseña actualizada correctamente.')
     passwordForm.password = ''
     passwordForm.confirmPassword = ''
+    passwordLocked.value = true
   } catch (error: any) {
     const message =
       error?.data?.message ?? error?.message ?? 'No se pudo actualizar la contraseña.'
