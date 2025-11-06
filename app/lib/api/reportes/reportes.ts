@@ -3,6 +3,7 @@ import {
   type AddType,
   type AnuncioViewResponseDTO,
 } from "../anuncios/anuncio";
+import { CURRENT_REVIEWS_URI } from "../reviews/reviews";
 import { CURRENT_SALES_URI } from "../ventas/sales";
 import { getBlobFromApi, postBlobToApi } from "~/utils/plainFetch";
 
@@ -240,6 +241,33 @@ export const reportDeVentasPorCinePdf = async (
   const response = await getBlobFromApi(
     `${CURRENT_SALES_URI}/reports/sales/cinemas/top/pdf`,
     query
+  );
+  return response;
+};
+
+// Reportes de comentarios de usuario
+export interface UserCommentsReportQuery {
+  startDate: string; // ISO date string e.g. 2025-10-01
+  endDate: string; // ISO date string e.g. 2025-10-31
+  roomId?: string; // optional UUID of the cinema room
+}
+
+export interface CommentReportResponse {
+  clientEmail: string;
+  roomName: string;
+  comment: string;
+  createdAt: string; // ISO date time string
+}
+
+export const cinemaAdminCommentReport = async (
+  query: UserCommentsReportQuery
+): Promise<CommentReportResponse[]> => {
+  const response = await $api<CommentReportResponse[]>(
+    `${CURRENT_REVIEWS_URI}/report/comments`,
+    {
+      method: "GET",
+      params: query,
+    }
   );
   return response;
 };

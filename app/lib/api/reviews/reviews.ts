@@ -1,6 +1,6 @@
 import type { Entity } from "../utils/entity";
 
-const CURRENT_REVIEWS_URI = "/v1/reviews";
+export const CURRENT_REVIEWS_URI = "/v1/reviews";
 
 export interface Review extends Entity {
     cinemaId: string,
