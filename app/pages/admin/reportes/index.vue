@@ -138,6 +138,12 @@ const reports = reactive([
     route: "/admin/reportes/salas-mejor-calificadas",
     permitedRoles: [AppRoles.CINEMA_ADMIN],
   },
+  {
+    title: "Salas más comentadas",
+    description: "Identifica las salas con mayor actividad de comentarios",
+    route: "/admin/reportes/salas-mas-comentadas",
+    permitedRoles: [AppRoles.ADMIN],
+  },
 ]);
 
 const filteredReports = computed(() => {
