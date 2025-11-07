@@ -279,4 +279,51 @@ export const cinemaAdminCommentReportPdf = async (
     query
   );
   return response;
+};
+
+export interface RoomRatingStatsResponse {
+  roomName: string;
+  averageRating: number;
+  reviewCount: number;
 }
+
+export interface LikedRoomReportResponse {
+  roomName: string;
+  clientEmail: string;
+  rating: number;
+  createdAt: string; // ISO date time string
+}
+
+export interface TopLikedRoomsReportReponse {
+  ratingStats: RoomRatingStatsResponse[];
+  reviews: LikedRoomReportResponse[];
+}
+
+export interface TopLikedRoomsReportQuery {
+  startDate: string; // ISO date string e.g. 2025-10-01
+  endDate: string; // ISO date string e.g. 2025-10-31
+  roomId?: string; // optional UUID of the cinema room
+}
+
+export const topLikedRoomsReport = async (
+  query: TopLikedRoomsReportQuery
+): Promise<TopLikedRoomsReportReponse> => {
+  const response = await $api<TopLikedRoomsReportReponse>(
+    `${CURRENT_REVIEWS_URI}/report/rooms/most-liked`,
+    {
+      method: "GET",
+      params: query,
+    }
+  );
+  return response;
+};
+
+export const topLikedRoomsReportPdf = async (
+  query: TopLikedRoomsReportQuery
+): Promise<Blob> => {
+  const response = await getBlobFromApi(
+    `${CURRENT_REVIEWS_URI}/export/rooms/most-liked`,
+    query
+  );
+  return response;
+};
