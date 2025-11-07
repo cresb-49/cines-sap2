@@ -270,7 +270,6 @@ export const cinemaAdminCommentReport = async (
   return response;
 };
 
-
 export const cinemaAdminCommentReportPdf = async (
   query: UserCommentsReportQuery
 ): Promise<Blob> => {
@@ -323,6 +322,44 @@ export const topLikedRoomsReportPdf = async (
 ): Promise<Blob> => {
   const response = await getBlobFromApi(
     `${CURRENT_REVIEWS_URI}/export/rooms/most-liked`,
+    query
+  );
+  return response;
+};
+
+export interface RoomCommentsStatsResponse {
+  roomName: string;
+  reviewCount: number;
+}
+export interface TopCommentedRoomsReportResponse {
+  commentStats: RoomCommentsStatsResponse[];
+  reviews: CommentReportResponse[];
+}
+
+export interface TopCommentedRoomsReportQuery {
+  startDate: string; // ISO date string e.g. 2025-10-01
+  endDate: string; // ISO date string e.g. 2025-10-31
+  roomId?: string; // optional UUID of the cinema room
+}
+
+export const topCommentedRoomsReport = async (
+  query: TopCommentedRoomsReportQuery
+): Promise<TopCommentedRoomsReportResponse> => {
+  const response = await $api<TopCommentedRoomsReportResponse>(
+    `${CURRENT_REVIEWS_URI}/report/rooms/most-commented`,
+    {
+      method: "GET",
+      params: query,
+    }
+  );
+  return response;
+};
+
+export const topCommentedRoomsReportPdf = async (
+  query: TopCommentedRoomsReportQuery
+): Promise<Blob> => {
+  const response = await getBlobFromApi(
+    `${CURRENT_REVIEWS_URI}/export/rooms/most-commented`,
     query
   );
   return response;
