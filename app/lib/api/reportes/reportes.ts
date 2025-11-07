@@ -269,3 +269,14 @@ export const cinemaAdminCommentReport = async (
   );
   return response;
 };
+
+
+export const cinemaAdminCommentReportPdf = async (
+  query: UserCommentsReportQuery
+): Promise<Blob> => {
+  const response = await getBlobFromApi(
+    `${CURRENT_REVIEWS_URI}/export/comments`,
+    query
+  );
+  return response;
+}

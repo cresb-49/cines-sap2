@@ -22,6 +22,14 @@
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <Button
+            icon="pi pi-file-pdf"
+            label="Ver PDF"
+            severity="danger"
+            :loading="pdfLoading"
+            :disabled="companyMissing || pdfLoading"
+            @click="generatePdf"
+          />
+          <Button
             icon="pi pi-refresh"
             label="Limpiar resultados"
             severity="secondary"
@@ -207,6 +215,13 @@
         </DataTable>
       </div>
     </main>
+
+    <PdfViewerModal
+      v-model="showPdf"
+      :blob="pdfBlob"
+      title="Reporte de comentarios de usuarios"
+      file-name="reporte-comentarios-usuarios.pdf"
+    />
   </div>
 </template>
 
@@ -222,6 +237,7 @@ import Column from "primevue/column";
 import { toast } from "vue-sonner";
 import { useAuthStore } from "~/stores/auth";
 import { useCustomQuery } from "~/composables/useCustomQuery";
+import PdfViewerModal from "~/components/common/PdfViewerModal.vue";
 import {
   getCinemasByCompanyId,
   type CinemaResponseDTO,
@@ -232,6 +248,7 @@ import {
 } from "~/lib/api/cinema/hall";
 import {
   cinemaAdminCommentReport,
+  cinemaAdminCommentReportPdf,
   type CommentReportResponse,
   type UserCommentsReportQuery,
 } from "~/lib/api/reportes/reportes";
@@ -263,6 +280,9 @@ const errors = reactive<{
 
 const comments = ref<CommentReportResponse[]>([]);
 const loading = ref(false);
+const pdfLoading = ref(false);
+const pdfBlob = ref<Blob | null>(null);
+const showPdf = ref(false);
 const lastQuerySummary = ref<{
   cinemaName: string;
   roomName?: string | null;
@@ -412,6 +432,7 @@ async function runReport() {
   if (!query) return;
 
   loading.value = true;
+  pdfBlob.value = null;
   try {
     const response = await cinemaAdminCommentReport(query);
     comments.value = response;
@@ -448,6 +469,8 @@ function resetAll() {
 function clearResults() {
   comments.value = [];
   lastQuerySummary.value = null;
+  pdfBlob.value = null;
+  showPdf.value = false;
 }
 
 const selectedCinemaLabel = computed(() => {
@@ -481,6 +504,30 @@ function formatDisplayDateTime(value?: string | null) {
     }).format(date);
   } catch {
     return value;
+  }
+}
+
+async function generatePdf() {
+  const query = buildQuery();
+  if (!query) return;
+
+  pdfLoading.value = true;
+  try {
+    const blob = await cinemaAdminCommentReportPdf(query);
+    if (!blob?.size) {
+      toast.info("No se generó información para el PDF con los filtros actuales.");
+      return;
+    }
+    pdfBlob.value = blob;
+    showPdf.value = true;
+  } catch (error: any) {
+    const message =
+      error?.data?.message ||
+      error?.message ||
+      "No se pudo generar el PDF del reporte.";
+    toast.error(message);
+  } finally {
+    pdfLoading.value = false;
   }
 }
 </script>
