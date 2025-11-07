@@ -22,7 +22,7 @@ export const anunciosComprados = async (
     `${CURRENT_ANUNCIO_URI}/report/bought`,
     {
       method: "POST",
-      body: query,
+      params: query,
     }
   );
   return response;
@@ -33,7 +33,6 @@ export const anunciosCompradosPdf = async (
 ): Promise<Blob> => {
   const response = await postBlobToApi(
     `${CURRENT_ANUNCIO_URI}/report/bought/pdf`,
-    undefined,
     query
   );
   return response;
@@ -66,7 +65,7 @@ export const gananciasAnunciante = async (
     `${CURRENT_ANUNCIO_URI}/report/ganancias-anunciante`,
     {
       method: "POST",
-      body: query,
+      params: query,
     }
   );
   return response;
@@ -77,7 +76,6 @@ export const gananciasAnunciantePdf = async (
 ): Promise<Blob> => {
   const response = await postBlobToApi(
     `${CURRENT_ANUNCIO_URI}/report/ganancias-anunciante/pdf`,
-    undefined,
     query
   );
   return response;
